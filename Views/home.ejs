@@ -1,0 +1,16 @@
+<%- include('Templates/header', { title: 'Home', errorMessage: errorMessage, authenticated: authenticated, username: username }) %>
+
+    <% if (!authenticated) { %>
+    <div class="container mt-5">
+        <h1>Welcome to the Home Page!</h1>
+        <p>Please <a href="/signup">Sign Up</a> or <a href="/login">Log In</a> to access the members area.</p>
+        <p><%= errorMessage %></p>
+    </div>
+    <% } else { %>
+    <div>
+        <h1>Welcome, <%= username %>!</h1>
+        <a href="/members">Go to Members Area</a> | <a href="/logout">Logout</a>
+    </div>
+    <% } %>
+    
+<%= include('Templates/footer') %>
