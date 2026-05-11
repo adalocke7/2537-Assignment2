@@ -137,7 +137,7 @@ app.post('/loggingin', async (req, res) => {
 
 app.get('/members', (req, res) => {
   if (req.session.authenticated) {
-    res.render('/members', { 
+    res.render('members', { 
       title: 'Members Area', 
       username: req.session.username, 
       errorMessage: req.session.errorMessage });
@@ -147,18 +147,17 @@ app.get('/members', (req, res) => {
   }
 });
 
-app.get('/admin', (req, res) => {
-  const users = userCollection.find({}).project({username: 1, email: 1, user_type: 1, _id: 0}).toArray();
-  if (req.session.authenticated && req.session.user_type === 'admin') {
-    res.render('/admin', { 
-      title: 'Admin Area', 
-      username: req.session.username, 
-      users: users, 
-      errorMessage: req.session.errorMessage });
-  } else {
-    req.session.errorMessage = 'Error: You must be logged in to an admin account to view the admin area';
-    res.redirect('/');
+app.get('/admin', async (req, res) => {
+  if (!req.session.authenticated || req.session.user_type !== 'admin') {
+    req.session.errorMessage = 'Error: Admins only';
+    return res.redirect('/');
   }
+  const users = await userCollection.find({}).project({username: 1, email: 1, user_type: 1, _id: 0}).toArray();
+  res.render('admin', { 
+    title: 'Admin Area', 
+    errorMessage: req.session.errorMessage, 
+    users: users
+   });
 });
 
 app.post('/promote', async (req, res) => {
@@ -184,8 +183,9 @@ app.post('/demote', async (req, res) => {
 });
 
 app.get('/logout', (req, res) => {
-  req.session.destroy();
-  res.redirect('/');
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
 });
 
 app.use((req, res) => {
