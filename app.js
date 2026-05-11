@@ -13,7 +13,8 @@ const port = process.env.PORT || 3000;
 const expireTime = 60 * 60 * 1000; // 1 hour in milliseconds
 
 const path = require('path');
-app.use(express.static(path.join(__dirname, 'Public')));
+app.set('view engine', 'ejs');
+app.use(express.static('public'));
 
 
 const mongodb_host = process.env.MONGODB_HOST;
@@ -54,16 +55,17 @@ app.use(session({
 
 // Basic Route
 app.get('/', (req, res) => {
-  res.render('home', 
-  { title: 'Home' },
-  {authenticated: req.session.authenticated, username: req.session.username },
-  { errorMessage: '' });
+  res.render('home', { 
+    title: 'Home', 
+    authenticated: req.session.authenticated, 
+    username: req.session.username,
+    errorMessage: req.session.errorMessage });
 });
 
 app.get('/signup', (req, res) => {
-  res.render('signUp', 
-    { title: 'Signup' },
-    { errorMessage: '' });
+  res.render('signUp', { 
+    title: 'Signup', 
+    errorMessage: req.session.errorMessage });
 });
 
 app.post('/signingup', async (req, res) => {
@@ -78,26 +80,24 @@ app.post('/signingup', async (req, res) => {
   const valuation = schema.validate({ username, email, password });
   if (valuation.error) {
     console.error(valuation.error.details[0].message); // see exact error
-    res.render('signUp', 
-      { title: 'Signup' },
-      { errorMessage: 'Error: Incorrect inputted format' });
+    req.session.errorMessage = 'Error: Incorrect inputted format';
+    res.render('signUp', { title: 'Signup', 
+      errorMessage: req.session.errorMessage });
     return;
   }
 
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   await userCollection.insertOne({username: username, email: email, password: hashedPassword, user_type: 'user'});
-
-  const html = 'Created user successfully! <a href="/login">Login here</a>';
-  res.send(html);
+  res.redirect('/login');
 });
 
 app.get('/login', (req, res) => {
-  res.render('login', 
-    { title: 'Login' },
-    { errorMessage: '' });
+  res.render('login', { 
+    title: 'Login', 
+    errorMessage: req.session.errorMessage });
 });
 
-app.post('/logingin', async (req, res) => {
+app.post('/loggingin', async (req, res) => {
   const { email, password } = req.body;
   
   const schema = Joi.object({
@@ -107,58 +107,79 @@ app.post('/logingin', async (req, res) => {
 
   const validationResult = schema.validate({ email, password });
   if (validationResult.error) {
-    res.render('login', 
-      { title: 'Login' },
-      { errorMessage: 'Error: Incorrect inputted format' });
+    req.session.errorMessage = 'Error: Incorrect inputted format';
+    res.redirect('/login');
     return;
   }
 
   const result = await userCollection.find({ email: email }).project({email: 1, username: 1, password: 1, _id: 1}).toArray();
 
   if (result.length != 1) {
-    res.render('login', 
-      { title: 'Login' },
-      { errorMessage: 'Error: Invalid email or password' });
+    req.session.errorMessage = 'Error: Invalid email or password';
+    res.redirect('/login');
     return;
   }
   if (await bcrypt.compare(password, result[0].password)) {
     req.session.authenticated = true;
     req.session.email = email;
+    req.session.errorMessage = '';
     req.session.username = result[0].username;
+    req.session.user_type = result[0].user_type;
     req.session.cookie.maxAge = expireTime;
     res.redirect('/members');
     return;
   } else {
-    res.render('login', 
-      { title: 'Login' },
-      { errorMessage: 'Error: Invalid email or password' });
+    req.session.errorMessage = 'Error: Invalid email or password';
+    res.redirect('/login');
     return;
   }
 });
 
 app.get('/members', (req, res) => {
   if (req.session.authenticated) {
-    res.render('members', 
-      { title: 'Members Area' },
-      { username: req.session.username,});
+    res.render('/members', { 
+      title: 'Members Area', 
+      username: req.session.username, 
+      errorMessage: req.session.errorMessage });
   } else {
-    res.redirect('/', 
-      { title: 'Home' },
-      { errorMessage: 'Error: You must be logged in to access the members area' }
-    );
+    req.session.errorMessage = 'Error: You must be logged in to access the members area';
+    res.redirect('/');
   }
 });
 
 app.get('/admin', (req, res) => {
-  if (req.session.authenticated) {
-    res.render('admin',
-      { title: 'Admin Area' },
-      { username: req.session.username });
+  const users = userCollection.find({}).project({username: 1, email: 1, user_type: 1, _id: 0}).toArray();
+  if (req.session.authenticated && req.session.user_type === 'admin') {
+    res.render('/admin', { 
+      title: 'Admin Area', 
+      username: req.session.username, 
+      users: users, 
+      errorMessage: req.session.errorMessage });
   } else {
-    res.redirect('/', 
-      { title: 'Home' },
-      { errorMessage: 'Error: You must be logged in to an admin account to view this page' }
-    );
+    req.session.errorMessage = 'Error: You must be logged in to an admin account to view the admin area';
+    res.redirect('/');
+  }
+});
+
+app.post('/promote', async (req, res) => {
+  if (req.session.authenticated && req.session.user_type === 'admin') {
+    const { email } = req.body;
+    await userCollection.updateOne({ email: email }, { $set: { user_type: 'admin' } });
+    res.redirect('/admin');
+  } else {     
+    req.session.errorMessage = 'Error: You must be logged in to an admin account to use this action';
+    res.redirect('/');
+  }
+});
+
+app.post('/demote', async (req, res) => {
+  if (req.session.authenticated && req.session.user_type === 'admin') {
+    const { email } = req.body;
+    await userCollection.updateOne({ email: email }, { $set: { user_type: 'user' } });
+    res.redirect('/admin');
+  } else {
+    req.session.errorMessage = 'Error: You must be logged in to an admin account to use this action';
+    res.redirect('/');
   }
 });
 
@@ -168,8 +189,8 @@ app.get('/logout', (req, res) => {
 });
 
 app.use((req, res) => {
-  res.render('404', 
-    { title: '404 Not Found' });
+  res.render('404', { 
+    title: '404 Not Found' });
 });
 
 // Start Server

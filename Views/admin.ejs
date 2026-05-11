@@ -1,10 +1,10 @@
-<%- include('Templates/header') %>
+<%- include('Templates/header', { title: 'Admin Area', errorMessage: errorMessage, users: users }) %>
 
+    <div>
+        <% for (let i = 0; i < users.length; i++) { %>
+            <p><%= users[i].email %> - <%= users[i].role %></p> <button action="/promote" method="post">Promote to Admin</button> <button action="/demote" method="post">Demote to User</button>
+        <% } %>
+        <p><%= errorMessage %></p>
+    </div>
 
-
-
-
-
-
-
-<%= include('Templates/footer') %>
+<%- include('Templates/footer') %>
