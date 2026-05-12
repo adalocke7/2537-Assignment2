@@ -182,25 +182,26 @@ app.get('/members', (req, res) => {
 
 app.get('/admin', async (req, res) => {
   if (!req.session.authenticated) {
-    req.redirect('/404');
+    return res.redirect('/404');
   }
-  if (!req.session.user_type !== 'admin') {
+  if (req.session.user_type !== 'admin') {
     req.session.errorMessage = 'Error 403: Admins only';
     req.session.save(() => {
       res.redirect('/404');
     });
     return;
   }
-  const users = await userCollection.find({}).project({username: 1, email: 1, user_type: 1, _id: 0}).toArray();
+
+  const users = await userCollection.find({}).project({ username: 1, email: 1, user_type: 1, _id: 0 }).toArray();
   const errorMessage = req.session.errorMessage || '';
   if (req.session.errorMessage) {
     req.session.errorMessage = null;
   }
-  res.render('admin', { 
-    title: 'Admin Area', 
-    errorMessage, 
-    users: users
-   });
+  res.render('admin', {
+    title: 'Admin Area',
+    errorMessage,
+    users,
+  });
 });
 
 app.post('/promote', async (req, res) => {
