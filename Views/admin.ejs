@@ -1,10 +1,17 @@
 <%- include('Templates/header', { title: 'Admin Area', errorMessage: errorMessage, users: users }) %>
 
-    <div>
-        <% for (let i = 0; i < users.length; i++) { %>
-            <p><%= users[i].email %> - <%= users[i].role %></p> <button action="/promote" method="post">Promote to Admin</button> <button action="/demote" method="post">Demote to User</button>
-        <% } %>
-        <p><%= errorMessage %></p>
-    </div>
+    <% for (let i = 0; i < users.length; i++) { %>
+        <p><%= users[i].email %> - <%= users[i].user_type %></p>
+        
+        <form action="/promote" method="post" style="display:inline">
+            <input type="hidden" name="email" value="<%= users[i].email %>">
+            <button type="submit">Promote to Admin</button>
+        </form>
+
+        <form action="/demote" method="post" style="display:inline">
+            <input type="hidden" name="email" value="<%= users[i].email %>">
+            <button type="submit">Demote to User</button>
+        </form>
+    <% } %>
 
 <%- include('Templates/footer') %>

@@ -55,17 +55,26 @@ app.use(session({
 
 // Basic Route
 app.get('/', (req, res) => {
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  } 
   res.render('home', { 
     title: 'Home', 
-    authenticated: req.session.authenticated, 
-    username: req.session.username,
-    errorMessage: req.session.errorMessage });
+    authenticated: req.session.authenticated || false, 
+    username: req.session.username || '',
+    errorMessage
+  });
 });
 
 app.get('/signup', (req, res) => {
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  }
   res.render('signUp', { 
     title: 'Signup', 
-    errorMessage: req.session.errorMessage });
+    errorMessage});
 });
 
 app.post('/signingup', async (req, res) => {
@@ -88,13 +97,20 @@ app.post('/signingup', async (req, res) => {
 
   const hashedPassword = await bcrypt.hash(password, saltRounds);
   await userCollection.insertOne({username: username, email: email, password: hashedPassword, user_type: 'user'});
-  res.redirect('/login');
+  req.session.save(() => {
+    res.redirect('/login');
+  });
 });
 
 app.get('/login', (req, res) => {
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  }
   res.render('login', { 
     title: 'Login', 
-    errorMessage: req.session.errorMessage });
+    errorMessage
+  });
 });
 
 app.post('/loggingin', async (req, res) => {
@@ -108,15 +124,19 @@ app.post('/loggingin', async (req, res) => {
   const validationResult = schema.validate({ email, password });
   if (validationResult.error) {
     req.session.errorMessage = 'Error: Incorrect inputted format';
-    res.redirect('/login');
+    req.session.save(() => {
+      res.redirect('/login');
+    });
     return;
   }
 
-  const result = await userCollection.find({ email: email }).project({email: 1, username: 1, password: 1, _id: 1}).toArray();
+  const result = await userCollection.find({ email: email }).project({email: 1, username: 1, password: 1, _id: 1, user_type: 1}).toArray();
 
   if (result.length != 1) {
     req.session.errorMessage = 'Error: Invalid email or password';
-    res.redirect('/login');
+    req.session.save(() => {
+      res.redirect('/login');
+    });
     return;
   }
   if (await bcrypt.compare(password, result[0].password)) {
@@ -126,36 +146,54 @@ app.post('/loggingin', async (req, res) => {
     req.session.username = result[0].username;
     req.session.user_type = result[0].user_type;
     req.session.cookie.maxAge = expireTime;
-    res.redirect('/members');
+    req.session.save(() => {
+      res.redirect('/members');
+    });
     return;
   } else {
     req.session.errorMessage = 'Error: Invalid email or password';
-    res.redirect('/login');
+    req.session.save(() => {
+      res.redirect('/login');
+    });
     return;
   }
 });
 
 app.get('/members', (req, res) => {
   if (req.session.authenticated) {
+    const errorMessage = req.session.errorMessage || '';
+    if (req.session.errorMessage) {
+      req.session.errorMessage = null;
+    }
     res.render('members', { 
       title: 'Members Area', 
       username: req.session.username, 
-      errorMessage: req.session.errorMessage });
+      errorMessage
+    });
   } else {
     req.session.errorMessage = 'Error: You must be logged in to access the members area';
-    res.redirect('/');
+    req.session.save(() => {
+      res.redirect('/');
+    });
   }
 });
 
 app.get('/admin', async (req, res) => {
   if (!req.session.authenticated || req.session.user_type !== 'admin') {
-    req.session.errorMessage = 'Error: Admins only';
-    return res.redirect('/');
+    req.session.errorMessage = 'Error 403: Admins only';
+    req.session.save(() => {
+      res.redirect('/404');
+    });
+    return;
   }
   const users = await userCollection.find({}).project({username: 1, email: 1, user_type: 1, _id: 0}).toArray();
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  }
   res.render('admin', { 
     title: 'Admin Area', 
-    errorMessage: req.session.errorMessage, 
+    errorMessage, 
     users: users
    });
 });
@@ -164,10 +202,14 @@ app.post('/promote', async (req, res) => {
   if (req.session.authenticated && req.session.user_type === 'admin') {
     const { email } = req.body;
     await userCollection.updateOne({ email: email }, { $set: { user_type: 'admin' } });
-    res.redirect('/admin');
+    req.session.save(() => {
+      res.redirect('/admin');
+    });
   } else {     
-    req.session.errorMessage = 'Error: You must be logged in to an admin account to use this action';
-    res.redirect('/');
+    req.session.errorMessage = 'Error 403: You must be logged in to an admin account to use this action';
+    req.session.save(() => {
+      res.redirect('/404');
+    });
   }
 });
 
@@ -175,22 +217,40 @@ app.post('/demote', async (req, res) => {
   if (req.session.authenticated && req.session.user_type === 'admin') {
     const { email } = req.body;
     await userCollection.updateOne({ email: email }, { $set: { user_type: 'user' } });
-    res.redirect('/admin');
+    req.session.save(() => {
+      res.redirect('/admin');
+    });
   } else {
-    req.session.errorMessage = 'Error: You must be logged in to an admin account to use this action';
-    res.redirect('/');
+    req.session.errorMessage = 'Error 403: You must be logged in to an admin account to use this action';
+    req.session.save(() => {
+      res.redirect('/404');
+    });
   }
 });
 
 app.get('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/');
-  });
+  req.session.destroy();
+  res.redirect('/');
+});
+
+app.get('/404', (req, res) => { 
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  }
+  res.render('404', { 
+    title: '404 Not Found',
+    errorMessage: errorMessage});
 });
 
 app.use((req, res) => {
+  const errorMessage = req.session.errorMessage || '';
+  if (req.session.errorMessage) {
+    req.session.errorMessage = null;
+  }
   res.render('404', { 
-    title: '404 Not Found' });
+    title: '404 Not Found',
+    errorMessage: errorMessage });
 });
 
 // Start Server
