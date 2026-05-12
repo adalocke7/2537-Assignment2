@@ -13,6 +13,7 @@ const port = process.env.PORT || 3000;
 const expireTime = 60 * 60 * 1000; // 1 hour in milliseconds
 
 const path = require('path');
+app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 app.use(express.static('public'));
 
