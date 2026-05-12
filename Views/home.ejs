@@ -3,13 +3,15 @@
     <% if (!authenticated) { %>
     <div class="container mt-5">
         <h1>Welcome to the Home Page!</h1>
-        <p>Please <a href="/signup">Sign Up</a> or <a href="/login">Log In</a> to access the members area.</p>
+        <p>Please <button type="button" class="btn btn-primary" onclick="window.location.href='/signup'">
+            Sign Up</button> or <button type="button" class="btn btn-primary" onclick="window.location.href='/login'">Log In</button> to access the members area.</p>
         <p><%= errorMessage %></p>
     </div>
     <% } else { %>
     <div>
         <h1>Welcome, <%= username %>!</h1>
-        <a href="/members">Go to Members Area</a> | <a href="/logout">Logout</a>
+        <button type="button" class="btn btn-secondary" onclick="window.location.href='/members'">Go to Members Area</button> | 
+        <button type="button" class="btn btn-primary" onclick="window.location.href='/logout'">Log Out</button>
     </div>
     <% } %>
 

@@ -3,13 +3,23 @@
     <div>
         <h1>Signup Page</h1> 
         <form action="/signingup" method="POST">
-            <input type="text" name="username" placeholder="Username" required><br>
-            <input type="email" name="email" placeholder="Email" required><br>
-            <input type="password" name="password" placeholder="Password" required><br>
-            <button type="submit">Signup</button>
+            <div class="mb-3">
+                <label for="usernameInput" class="form-label">Username</label>
+                <input type="text" class="form-control" id="usernameInput" aria-describedby="usernameHelp">
+                <div id="usernameHelp" class="form-text">Choose a unique username.</div>
+            </div>
+            <div class="mb-3">
+                <label for="emailInput" class="form-label">Email address</label>
+                <input type="email" class="form-control" id="emailInput" aria-describedby="emailHelp">
+            </div>
+            <div class="mb-3">
+                <label for="passwordInput" class="form-label">Password</label>
+                <input type="password" class="form-control" id="passwordInput">
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
         </form>
         <p><%= errorMessage %></p>
-        <a href="/login">Already have an account? Login here</a>
+        <button type="button" class="btn btn-primary" onclick="window.location.href='/login'">Already have an account? Login here</button>
     </div>
 
 <%- include('Templates/footer') %>
