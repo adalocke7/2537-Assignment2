@@ -5,16 +5,16 @@
         <form action="/signingup" method="POST">
             <div class="mb-3">
                 <label for="usernameInput" class="form-label">Username</label>
-                <input type="text" class="form-control" id="usernameInput" aria-describedby="usernameHelp">
+                <input type="text" class="form-control" id="usernameInput" name="username" aria-describedby="usernameHelp">
                 <div id="usernameHelp" class="form-text">Choose a unique username.</div>
             </div>
             <div class="mb-3">
                 <label for="emailInput" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="emailInput" aria-describedby="emailHelp">
+                <input type="email" class="form-control" id="emailInput" name="email" aria-describedby="emailHelp">
             </div>
             <div class="mb-3">
                 <label for="passwordInput" class="form-label">Password</label>
-                <input type="password" class="form-control" id="passwordInput">
+                <input type="password" class="form-control" id="passwordInput" name="password">
             </div>
             <button type="submit" class="btn btn-primary">Submit</button>
         </form>
