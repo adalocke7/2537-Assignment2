@@ -16,9 +16,7 @@ const path = require('path');
 
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-app.use(express.static('public'));
-
-
+app.use(express.static(path.join(__dirname, 'Public')));
 
 
 const mongodb_host = process.env.MONGODB_HOST;
@@ -183,7 +181,10 @@ app.get('/members', (req, res) => {
 });
 
 app.get('/admin', async (req, res) => {
-  if (!req.session.authenticated || req.session.user_type !== 'admin') {
+  if (!req.session.authenticated) {
+    req.redirect('/404');
+  }
+  if (!req.session.user_type !== 'admin') {
     req.session.errorMessage = 'Error 403: Admins only';
     req.session.save(() => {
       res.redirect('/404');
